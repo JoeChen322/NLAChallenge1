@@ -1,0 +1,224 @@
+#include <Eigen/Dense>
+#include <iostream>
+#include <random>
+#include <unsupported/Eigen/SparseExtra>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+using namespace Eigen;
+typedef Eigen::Triplet<double> T;
+
+
+SparseMatrix<double, RowMajor> convolution( MatrixXd kernel, int height, int width,int kernel_size)
+{      
+    SparseMatrix<double, RowMajor> A(height*width, height*width);
+    std::vector<T> hav2TripletList;
+    hav2TripletList.reserve(height*width * kernel_size * kernel_size);
+    //4 corner elements
+    for (int m=1;m<kernel_size;m++ )
+    {
+       hav2TripletList.push_back(Triplet<double>(0,m,kernel(1,m)));
+      if(kernel(2,m)!=0)
+      {
+      hav2TripletList.push_back(Triplet<double>(0,width+m,kernel(2,m)));}
+      //top right
+      hav2TripletList.push_back(Triplet<double>(width-1,width-1-m,kernel(1,m-1)));  
+      if(kernel(2,m-1)!=0)
+      {
+      hav2TripletList.push_back(Triplet<double>(width-1,2*width-1-m,kernel(2,m-1)));}
+      //bottom left
+      if(kernel(0,m)!=0)
+      {
+      hav2TripletList.push_back(Triplet<double>(width*(height-1),width*(height-1)+m,kernel(0,m))); }
+      hav2TripletList.push_back(Triplet<double>(width*(height-1),width*(height-1)+m-width,kernel(1,m)));  
+      //bottom right
+      if(kernel(0,m-1)!=0)
+      {
+      hav2TripletList.push_back(Triplet<double>(width*height-1,width*height-1-m,kernel(0,m-1))); }      
+      hav2TripletList.push_back(Triplet<double>(width*height-1,width*height-1-m-width,kernel(1,m-1)));           
+     
+    }
+    // top/bottom edges(except corner )
+    for (int j = 1; j < width-1; j++)
+    {
+      for (int m=0;m<kernel_size;m++ )
+            {
+               hav2TripletList.push_back(Triplet<double>(j,j+width-1+m,kernel(1,m)));
+               if(kernel(2,m)!=0)
+               { 
+               hav2TripletList.push_back(Triplet<double>(j,j+2*width-1+m,kernel(2,m)));}     
+            }
+    }
+    for (int j = 1; j < width-1; j++)
+    {
+      for (int m=0;m<kernel_size;m++ )
+            {
+              if(kernel(0,m)!=0)
+              {
+               hav2TripletList.push_back(Triplet<double>((height-1)*width+j,(height-1)*width+m-1,kernel(0,m)));}              
+               hav2TripletList.push_back(Triplet<double>((height-1)*width+j,(height-1)*width-width-1+m,kernel(1,m))); 
+            }
+    }
+    //other elements
+    for (int i = 1; i < height-1; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+           
+            int k = i *width + j; // row number of A1
+            if (j==0)//left column
+           {
+            for (int m=1;m<kernel_size;++m )
+              {
+               
+                if(kernel(0,m)!=0)
+                {
+                    hav2TripletList.push_back(Triplet<double>(k,k+m-1,kernel(0,m)));
+                }                   
+                hav2TripletList.push_back(Triplet<double>(k,k-width+m-1,kernel(1,m)));               
+                if(kernel(2,m)!=0){
+                hav2TripletList.push_back(Triplet<double>(k,k+width+m-1,kernel(2,m))); 
+                }        
+              
+              }
+           }
+           else if (j==width-1)//right column
+           {
+            for (int m=0;m<kernel_size-1;++m )
+              {
+                if(kernel(0,m)!=0)
+                {
+                    hav2TripletList.push_back(Triplet<double>(k,k-m,kernel(0,m)));
+                }                   
+                hav2TripletList.push_back(Triplet<double>(k,k-width-m,kernel(1,m)));                 
+                if(kernel(2,m)!=0)
+                {
+                hav2TripletList.push_back(Triplet<double>(k,k+width-m,kernel(2,m))); 
+                }              
+              }
+           }
+           else
+           {
+              for (int m=0;m<kernel_size;++m )
+            {
+              if(kernel(0,m)!=0)
+              {
+                  hav2TripletList.push_back(Triplet<double>(k,k+m-1,kernel(0,m)));
+              }             
+                  hav2TripletList.push_back(Triplet<double>(k,k-width-1+m,kernel(1,m)));                
+              if(kernel(2,m)!=0)
+              {
+                  hav2TripletList.push_back(Triplet<double>(k,k+width-1+m,kernel(2,m)));     
+              }     
+               
+            }
+           }         
+        }
+    }
+    A.setFromTriplets(hav2TripletList.begin(), hav2TripletList.end());
+    return A;
+}
+
+
+int main(int argc, char* argv[]) 
+{
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <image_path>" << std::endl;
+    return 1;
+  }
+
+  const char* input_image_path =argv[1];
+  std::cout<< input_image_path << std::endl;
+
+  // Load the image using stb_image
+  int width, height, channels;
+  unsigned char* image_data = stbi_load(input_image_path, &width, &height, &channels, 1);  // Force load as RGB
+  if (!image_data) 
+  {
+    std::cerr << "Error: Could not load image " << input_image_path
+              << std::endl;
+    return 1;
+  }
+
+
+  std::cout << "Image loaded: " << width << "x" << height << " with " << channels << " channels." << std::endl;
+ 
+ 
+ MatrixXd hsh2(3,3);
+  hsh2 << 1, 1, 1,
+          1, 1, 1,
+         1, 11, 1;
+hsh2=(1.0/9)*hsh2;
+  // Prepare Eigen matrices for each RGB channel 
+  MatrixXd origin_img(height,width);
+  MatrixXd noise_img(height,width);
+
+  
+  //generate a noise matrix with random num
+  MatrixXd noise;
+  noise=MatrixXd::Random(height,width);
+  noise=50*noise;
+
+  // Fill the matrices with image data
+  for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            int index = (i * width + j) * channels;
+            origin_img(i, j) = static_cast<double>(image_data[index]) / 255.0;
+            noise_img(i, j) = static_cast<double>(image_data[index]+noise(i,j)) / 255.0;
+            if(noise_img(i,j)>=1) {noise_img(i,j)=1;}
+            if(noise_img(i,j)<=0){noise_img(i,j)=0;}
+
+        }
+    }
+  // Free memory!!!
+  stbi_image_free(image_data);
+
+Map<VectorXd> v(origin_img.data(), origin_img.size());
+Map<VectorXd> w(noise_img.data(), noise_img.size());
+
+
+
+
+SparseMatrix<double, RowMajor> A2 = convolution(hsh2,height,width,3);
+std::cout << "A2 non-zero-numbers is " << A2.nonZeros() << std::endl;
+std::cout << "row_size of A1 is " << A2.rows() << std::endl;
+
+std::cout<<"norm of v is:"<<v.norm()<<std::endl;
+
+Matrix<double, Dynamic, Dynamic, RowMajor> smooth_img(height, width);
+VectorXd smooth_image_vector=A2*w;
+for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            smooth_img(i, j) = smooth_image_vector(i * width + j);
+        }
+    }
+
+
+  Matrix<unsigned char, Dynamic, Dynamic, RowMajor> after_noise_img(height, width);
+  after_noise_img = smooth_img.unaryExpr([](double val) -> unsigned char {
+    return static_cast<unsigned char>(val * 255);
+  });
+
+
+  const std::string output_image_path1 = "after_noise_img.png";
+  if (stbi_write_png(output_image_path1.c_str(), width, height, 1,
+                     after_noise_img.data(), width) == 0) {
+    std::cerr << "Error: Could not save grayscale image" << std::endl;
+
+    return 1;
+  }
+
+  //turn matrix into vector
+
+
+  std::cout << "Grayscale image saved to " << output_image_path1 << std::endl;
+
+  return 0;
+}
