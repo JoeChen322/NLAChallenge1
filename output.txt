@@ -28,3 +28,5 @@ New image saved to output_VectorY.png
 Sparse matrix A saved to ./A1.mtx
 Sparse matrix A saved to ./A2.mtx
 Sparse matrix A saved to ./A3.mtx
+New image saved to output_VectorX.png
+

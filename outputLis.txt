@@ -1,0 +1,21 @@
+
+number of processes = 1
+matrix size = 87296 x 87296 (435286 nonzero entries)
+
+initial vector x      : all components set to 0
+precision             : double
+linear solver         : GMRES
+preconditioner        : ILU(0)
+convergence condition : ||b-Ax||_2 <= 1.0e-09 * ||b-Ax_0||_2
+matrix storage format : CSR
+linear solver status  : normal end
+
+GMRES: number of iterations = 24
+GMRES:   double             = 24
+GMRES:   quad               = 0
+GMRES: elapsed time         = 9.120011e-02 sec.
+GMRES:   preconditioner     = 4.012585e-02 sec.
+GMRES:     matrix creation  = 9.536743e-07 sec.
+GMRES:   linear solver      = 5.107427e-02 sec.
+GMRES: relative residual    = 6.901486e-10
+
