@@ -387,8 +387,15 @@ int main(int argc, char *argv[])
     /**********************************Solve equation of A2*x = w****************************************/
     const std::string xMtxPath = "x.mtx";
     VectorXd x = readMarketVector(xMtxPath); // Read x.mtx file data and output it as image
+    /*-------another way to load x------*/
+    //VectorXd mat(height*width);
+    //VectorXd mat2(height*width);
+    //loadMarketVector(mat,"pre_x.mtx");
+    /*-----------------------------------*/
     const std::string x_image_path = "output_VectorX.png";
     outputVectorImage(x, height, width, x_image_path);
+
+    
     /*********************************************end****************************************************/
 
     // Free memory
